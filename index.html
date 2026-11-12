@@ -1215,8 +1215,12 @@ acoustic-style instrumental rendition of "Kudmayi" via Web Audio API.
 ----------------------------------------------------------------------- */
 let audioCtx = null;
 let isPlaying = false;
+let userWantsMusic = false;
+let pausedByLifecycle = false;
 let usingMp3 = false;
 let melodyTimer = null;
+let idlePauseTimer = null;
+const IDLE_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes idle auto-pause
 let padNodes = [];
 let masterGain = null;
 let warmFilter = null;
@@ -1475,6 +1479,22 @@ src.start(0);
 } catch (e) {}
 }
 
+function resetIdleMusicTimer() {
+if (idlePauseTimer) {
+clearTimeout(idlePauseTimer);
+idlePauseTimer = null;
+}
+if (isPlaying) {
+idlePauseTimer = setTimeout(function () {
+if (isPlaying) {
+userWantsMusic = false;
+pausedByLifecycle = false;
+stopMusic();
+}
+}, IDLE_TIMEOUT_MS);
+}
+}
+
 function startSynthFallback() {
 if (isPlaying && !usingMp3) return;
 usingMp3 = false;
@@ -1484,15 +1504,24 @@ if (audioCtx.state === 'suspended') {
 audioCtx.resume().catch(function () {});
 }
 isPlaying = true;
+pausedByLifecycle = false;
 stepIndex = 0;
 scheduleNextStep();
+resetIdleMusicTimer();
 const eq = document.getElementById('eq-container');
 if (eq) eq.classList.add('playing');
 updateMusicLabel();
 }
 
-function startMusic() {
-if (isPlaying) return;
+function startMusic(isAutoResume) {
+if (!isAutoResume) {
+userWantsMusic = true;
+}
+pausedByLifecycle = false;
+if (isPlaying) {
+resetIdleMusicTimer();
+return;
+}
 
 // Synchronously initialize & unlock Web Audio inside the user tap gesture so mobile/Safari never blocks fallback audio
 unlockWebAudioSync();
@@ -1506,7 +1535,7 @@ if (lastSource && !lastSource._boundError) {
 lastSource._boundError = true;
 lastSource.addEventListener('error', function () {
 mp3SourceFailed = true;
-if (!isPlaying) startSynthFallback();
+if (!isPlaying && userWantsMusic) startSynthFallback();
 });
 }
 
@@ -1521,15 +1550,20 @@ const playPromise = audioEl.play();
 if (playPromise !== undefined) {
 playPromise
 .then(function () {
+if (!userWantsMusic || document.hidden) {
+try { audioEl.pause(); } catch (e) {}
+return;
+}
 usingMp3 = true;
 isPlaying = true;
+resetIdleMusicTimer();
 const eq = document.getElementById('eq-container');
 if (eq) eq.classList.add('playing');
 updateMusicLabel();
 })
 .catch(function () {
 mp3SourceFailed = true;
-startSynthFallback();
+if (userWantsMusic && !document.hidden) startSynthFallback();
 });
 return;
 }
@@ -1541,8 +1575,16 @@ mp3SourceFailed = true;
 startSynthFallback();
 }
 
-function stopMusic() {
+function stopMusic(preserveIntent) {
+if (!preserveIntent) {
+userWantsMusic = false;
+pausedByLifecycle = false;
+}
 isPlaying = false;
+if (idlePauseTimer) {
+clearTimeout(idlePauseTimer);
+idlePauseTimer = null;
+}
 const audioEl = document.getElementById('kudmayi-audio');
 if (audioEl) {
 try {
@@ -1560,8 +1602,11 @@ updateMusicLabel();
 }
 
 function toggleMusic() {
-if (isPlaying) stopMusic();
-else startMusic();
+if (isPlaying) {
+stopMusic(false);
+} else {
+startMusic(false);
+}
 }
 
 function updateMusicLabel() {
@@ -1620,6 +1665,9 @@ ambientCanvas.height = h;
 }
 }
 
+let ambientAnimId = null;
+let drawAmbientLoop = null;
+
 function initAmbientGoldParticles() {
 const ambientCanvas = document.getElementById('ambient-canvas');
 if (!ambientCanvas || !ambientCanvas.getContext) return;
@@ -1637,7 +1685,11 @@ alpha: 0.2 + Math.random() * 0.45,
 });
 }
 
-function drawAmbient() {
+drawAmbientLoop = function () {
+if (document.hidden) {
+ambientAnimId = null;
+return;
+}
 aCtx.clearRect(0, 0, ambientCanvas.width, ambientCanvas.height);
 motes.forEach(function (m) {
 m.x += m.vx;
@@ -1654,10 +1706,12 @@ aCtx.arc(m.x, m.y, m.r, 0, Math.PI * 2);
 aCtx.fillStyle = 'rgba(243, 229, 171, ' + m.alpha + ')';
 aCtx.fill();
 });
-requestAnimationFrame(drawAmbient);
-}
+ambientAnimId = requestAnimationFrame(drawAmbientLoop);
+};
 
-requestAnimationFrame(drawAmbient);
+if (!document.hidden) {
+ambientAnimId = requestAnimationFrame(drawAmbientLoop);
+}
 }
 
 function showerBlessings(showMessage) {
@@ -1783,6 +1837,49 @@ window.scrollTo({ top: 0, behavior: 'smooth' });
 const blessBtn = document.getElementById('shower-blessings-btn');
 if (blessBtn) blessBtn.addEventListener('click', function () { showerBlessings(true); });
 
+// Reset 10-minute idle auto-pause whenever the guest interacts with the page
+['touchstart', 'pointerdown', 'scroll', 'keydown'].forEach(function (evtName) {
+window.addEventListener(evtName, function () {
+if (isPlaying) resetIdleMusicTimer();
+}, { passive: true });
+});
+
+// Auto-pause music & background animation when screen locks, app switches, or tab hides;
+// auto-resume when guest returns (if it was playing before they left)
+function handlePageHidden() {
+if (isPlaying) {
+pausedByLifecycle = true;
+stopMusic(true);
+}
+if (ambientAnimId) {
+cancelAnimationFrame(ambientAnimId);
+ambientAnimId = null;
+}
+}
+
+function handlePageVisible() {
+if (!ambientAnimId && drawAmbientLoop) {
+ambientAnimId = requestAnimationFrame(drawAmbientLoop);
+}
+updateCountdown();
+if (pausedByLifecycle && userWantsMusic) {
+startMusic(true);
+}
+}
+
+document.addEventListener('visibilitychange', function () {
+if (document.hidden) {
+handlePageHidden();
+} else {
+handlePageVisible();
+}
+});
+
+window.addEventListener('pagehide', handlePageHidden);
+window.addEventListener('pageshow', function () {
+if (!document.hidden) handlePageVisible();
+});
+
 // Initialize canvases, countdown & initial UI state
 resizeCanvases();
 window.toggleMusic = toggleMusic;
@@ -1790,7 +1887,9 @@ window.openInvitation = openInvitation;
 window.addEventListener('resize', resizeCanvases);
 initAmbientGoldParticles();
 updateCountdown();
-setInterval(updateCountdown, 1000);
+setInterval(function () {
+if (!document.hidden) updateCountdown();
+}, 1000);
 updateWhatsAppLink();
 updateMusicLabel();
 
