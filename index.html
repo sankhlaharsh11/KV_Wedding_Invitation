@@ -120,40 +120,51 @@ animation: spinSlow 95s linear infinite;
 will-change: transform;
 }
 
-/* Instant & Smooth Page Switching (Zero Stuck Hidden States) */
-.page-section {
+html {
+scroll-behavior: smooth;
+}
+
+/* Two-View Architecture: View 1 (Cover) -> View 2 (Continuous Vertical Scroll of Pages 2, 3, 4) */
+.view-container {
 display: none;
 opacity: 0;
 transform: translateY(10px);
 transition: opacity 0.35s ease, transform 0.35s ease;
 }
-.page-section.active {
+.view-container.active {
 display: block;
 }
-.page-section.visible {
+.view-container.visible {
 opacity: 1;
 transform: translateY(0);
 }
 
-/* Smooth Vertical Festivities Scroll Container on Page 3 */
-.festivities-scroll {
-max-height: 58vh;
-overflow-y: auto;
--webkit-overflow-scrolling: touch;
-overscroll-behavior: contain;
-scrollbar-width: thin;
-scrollbar-color: #C59B27 #FAF3E3;
+.page-section {
+display: block;
+opacity: 1;
+transform: none;
 }
-.festivities-scroll::-webkit-scrollbar {
-width: 6px;
+
+.section-divider {
+display: flex;
+align-items: center;
+justify-content: center;
+gap: 0.75rem;
+margin: 0.5rem auto;
+padding: 0 1.5rem;
 }
-.festivities-scroll::-webkit-scrollbar-track {
-background: #FAF3E3;
-border-radius: 9999px;
+.section-divider::before,
+.section-divider::after {
+content: '';
+height: 1px;
+flex: 1;
+max-width: 11rem;
+background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.75), transparent);
 }
-.festivities-scroll::-webkit-scrollbar-thumb {
-background: #C59B27;
-border-radius: 9999px;
+
+/* Continuous Vertical Festivities Stack */
+.festivities-stack {
+overflow: visible;
 }
 
 /* Music Equalizer Bars */
@@ -215,16 +226,18 @@ touch-action: manipulation;
 <canvas id="petal-canvas" aria-hidden="true"></canvas>
 
 <!-- ========================================================= -->
-<!-- TOP PERSISTENT FLOATING CONTROLS (MUSIC & BILINGUAL) -->
+<!-- TRUE VIEWPORT-FIXED FLOATING CONTROLS (MUSIC & BILINGUAL) -->
+<!-- Always visible & clickable on every section while scrolling -->
 <!-- ========================================================= -->
-<header class="relative z-20 w-full max-w-3xl flex flex-wrap items-center justify-between gap-2 mb-3 sm:mb-4 px-1" style="pointer-events: auto;">
-<!-- Background Music Controller (Clean Pill without Song Name) -->
-<div class="flex items-center rounded-full bg-maroon-royal/95 border border-gold-bright/75 text-gold-light shadow-lg overflow-hidden">
+<div id="floating-controls-bar" class="fixed top-3 left-0 right-0 z-40 px-2.5 sm:px-5 pointer-events-none">
+<div class="w-full max-w-3xl mx-auto flex items-center justify-between gap-2">
+<!-- Floating Music Toggle Pill -->
+<div class="pointer-events-auto flex items-center rounded-full bg-maroon-deep/95 backdrop-blur-md border border-gold-bright text-gold-light shadow-[0_8px_24px_rgba(0,0,0,0.45)] overflow-hidden">
 <button
 type="button"
 id="music-toggle-btn"
 aria-label="Play or Pause Background Music"
-class="flex items-center gap-2 px-4 py-2.5 hover:bg-maroon-crimson transition-all active:scale-95 cursor-pointer"
+class="flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 hover:bg-maroon-crimson transition-all active:scale-95 cursor-pointer"
 >
 <div id="eq-container" class="flex items-end gap-[2.5px] h-4 w-4 justify-center shrink-0">
 <span class="eq-bar h-1.5"></span>
@@ -236,41 +249,38 @@ class="flex items-center gap-2 px-4 py-2.5 hover:bg-maroon-crimson transition-al
 </button>
 </div>
 
-<!-- Hidden HTML5 Audio Element for Local kudmayi.mp3 (checks kudmayi.mp3 / Kudmayi.mp3 first, then falls back to built-in instrumental) -->
-<audio id="kudmayi-audio" preload="auto" loop playsinline>
-<source src="./kudmayi.mp3" type="audio/mpeg" />
-<source src="./Kudmayi.mp3" type="audio/mpeg" />
-</audio>
-
-<!-- Current Page Counter Badge -->
-<div class="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-maroon-deep/85 border border-gold-bright/45 text-gold-light/90 text-xs font-cinzel tracking-widest shadow">
-<span data-i18n="pageLabel">PAGE</span>
-<span id="header-page-num" class="font-bold text-gold-bright">1</span>
-<span>/ 4</span>
-</div>
-
-<!-- Language Switcher ("English | ગુજરાતી") -->
+<!-- Floating Bilingual Switcher Pill ("English | ગુજરાતી") -->
 <div
 role="group"
 aria-label="Language Switcher"
-class="flex items-center bg-maroon-royal/95 p-1 rounded-full border border-gold-bright/75 shadow-lg"
+class="pointer-events-auto flex items-center bg-maroon-deep/95 backdrop-blur-md p-1 rounded-full border border-gold-bright shadow-[0_8px_24px_rgba(0,0,0,0.45)]"
 >
 <button
 type="button"
 id="btn-lang-en"
-class="px-3 py-1 rounded-full text-xs sm:text-sm font-semibold transition-all cursor-pointer bg-gold-bright text-maroon-deep shadow"
+class="px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all cursor-pointer bg-gold-bright text-maroon-deep shadow"
 >
 English
 </button>
 <button
 type="button"
 id="btn-lang-gu"
-class="px-3 py-1 rounded-full text-xs sm:text-sm font-gujSans font-semibold transition-all cursor-pointer text-gold-light hover:text-white"
+class="px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-gujSans font-semibold transition-all cursor-pointer text-gold-light hover:text-white"
 >
 ગુજરાતી
 </button>
 </div>
-</header>
+</div>
+</div>
+
+<!-- Top Spacer so fixed floating bar never overlaps the top Toran border at scroll=0 -->
+<div class="h-12 sm:h-14 w-full shrink-0" aria-hidden="true"></div>
+
+<!-- Hidden HTML5 Audio Element for Local kudmayi.mp3 (checks kudmayi.mp3 / Kudmayi.mp3 first, then falls back to built-in instrumental) -->
+<audio id="kudmayi-audio" preload="auto" loop playsinline>
+<source src="./kudmayi.mp3" type="audio/mpeg" />
+<source src="./Kudmayi.mp3" type="audio/mpeg" />
+</audio>
 
 <!-- ========================================================= -->
 <!-- MAIN ROYAL WEDDING INVITATION CARD CONTAINER -->
@@ -378,8 +388,9 @@ stroke-width="2.5"
 </div>
 
 <!-- ========================================================= -->
-<!-- PAGE 1: COVER — SHREE GANESHAYA NAMAH & KRUPA & VIVEK -->
+<!-- VIEW 1 (PAGE 1): COVER — SHREE GANESHAYA NAMAH & KRUPA & VIVEK -->
 <!-- ========================================================= -->
+<div id="cover-view" class="view-container active visible">
 <section id="page-1" class="page-section active visible relative z-10 px-5 sm:px-12 pt-4 pb-8 sm:pt-6 sm:pb-10 text-center">
 <!-- Sacred Invocation -->
 <p data-i18n="p1Invocation" class="t-heading font-cinzel text-xs sm:text-sm md:text-base font-bold tracking-[0.22em] text-maroon-crimson uppercase mb-3">
@@ -453,7 +464,7 @@ class="group relative inline-flex items-center justify-center gap-3 px-7 sm:px-9
 <span data-i18n="p1Cta" class="t-heading font-cinzel text-sm sm:text-base font-bold tracking-widest uppercase">
 Open Invitation
 </span>
-<svg class="w-5 h-5 text-gold-bright transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<svg class="w-5 h-5 text-gold-bright transition-transform group-hover:translate-y-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
 </svg>
 </button>
@@ -462,6 +473,13 @@ Tap to explore the wedding invitation
 </p>
 </div>
 </section>
+
+</div><!-- /#cover-view -->
+
+<!-- ========================================================= -->
+<!-- VIEW 2: ALL REMAINING PAGES ON CONTINUOUS VERTICAL SCROLL -->
+<!-- ========================================================= -->
+<div id="details-view" class="view-container">
 
 <!-- ========================================================= -->
 <!-- PAGE 2: HOST FAMILY & BRIDE / GROOM LINEAGE -->
@@ -532,8 +550,10 @@ Auspicious Wedding Dates
 </div>
 </section>
 
+<div class="section-divider relative z-10" aria-hidden="true"><span class="text-gold-antique text-sm">❖ ✦ ❖</span></div>
+
 <!-- ========================================================= -->
-<!-- PAGE 3: ALL 4 WEDDING FESTIVITIES (VERTICAL SCROLLABLE) -->
+<!-- PAGE 3: ALL 4 WEDDING FESTIVITIES -->
 <!-- ========================================================= -->
 <section id="page-3" class="page-section relative z-10 px-4 sm:px-9 pt-3 pb-6 sm:pt-5 sm:pb-8">
 <div class="text-center mb-3.5">
@@ -543,13 +563,11 @@ Auspicious Wedding Dates
 <h2 data-i18n="p3Header" class="t-heading font-cinzel text-2xl sm:text-3xl font-bold text-maroon-crimson">
 Wedding Festivities
 </h2>
-<p data-i18n="p3ScrollHint" class="t-body text-xs sm:text-sm text-maroon-royal/75 mt-1 italic">
-Scroll down to view all four auspicious ceremonies
-</p>
+
 </div>
 
 <!-- Dedicated Vertical Scroll Container for All 4 Events -->
-<div class="festivities-scroll pr-1 sm:pr-2 space-y-5">
+<div class="festivities-stack space-y-5">
 <!-- DAY 1 HEADER -->
 <div class="flex items-center justify-center gap-2 pt-1">
 <span class="h-[1px] flex-1 bg-gold-bright/60"></span>
@@ -579,9 +597,12 @@ Mameru
 
 <!-- Maternal Family (Mosal Paksh) -->
 <div class="p-3.5 sm:p-4 rounded-xl bg-ivory-cream/95 border border-gold-bright/55 mb-3">
-<h4 data-i18n="ev1MosalTitle" class="t-heading font-cinzel text-xs sm:text-sm font-bold uppercase tracking-wider text-maroon-crimson mb-2 flex items-center gap-1.5">
+<h4 data-i18n="ev1MosalTitle" class="t-heading font-cinzel text-xs sm:text-sm font-bold uppercase tracking-wider text-maroon-crimson mb-1 flex items-center gap-1.5">
 <span>🪷</span> Maternal Family (Mosal Paksh)
 </h4>
+<p data-i18n="ev1MosalFamily" class="t-heading text-xs sm:text-sm font-semibold text-gold-antique mb-2">
+Vasani Parivaar — Chatrapati Sambhaji Nagar
+</p>
 <ul class="space-y-1 text-sm sm:text-base font-cormorant text-maroon-royal">
 <li data-i18n="ev1Mosal1" class="t-body">
 <strong class="font-semibold text-maroon-crimson">Nana – Nani:</strong> Manjulaben & Dhanji Vasani
@@ -722,6 +743,8 @@ class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gold-bright hove
 </div>
 </section>
 
+<div class="section-divider relative z-10" aria-hidden="true"><span class="text-gold-antique text-sm">❖ ✦ ❖</span></div>
+
 <!-- ========================================================= -->
 <!-- PAGE 4: SAVE THE DATE, LIVE COUNTDOWN & CLOSING BLESSINGS -->
 <!-- (NO GOOGLE CALENDAR OR .ICS DOWNLOAD BUTTONS) -->
@@ -809,7 +832,7 @@ class="inline-flex items-center gap-1.5 mt-1.5 text-xs sm:text-sm font-semibold 
 With Love — Sankhla Parivaar
 </h3>
 <p data-i18n="p4FamilyNames" class="t-body font-cormorant text-base sm:text-lg font-semibold text-maroon-royal leading-relaxed">
-Smt. Parvathiben & Shri Jayanthilal Sankhla, Smt. Meenakshiben & Shri Bharat Sankhla, and entire Sankhla Family
+Smt. Parvathiben & Shri Jayanthilal Sankhla, Smt. Meenakshiben & Shri Bharat Sankhla, Smt. Rakshaben & Shri Kamlesh Sankhla, and entire Sankhla Family
 </p>
 <p data-i18n="p4ClosingMsg" class="t-body font-cormorant italic text-sm sm:text-base text-maroon-royal/85 mt-2">
 “Your presence and blessings are the greatest gifts we could ask for as Krupa & Vivek begin their forever journey together.”
@@ -844,42 +867,36 @@ class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 
 </section>
 
 <!-- ========================================================= -->
-<!-- BOTTOM PERSISTENT NAVIGATION BAR (PREV / DOTS / NEXT) -->
+<!-- ROYAL ORNAMENTAL FOOTER (COVER & BACK TO TOP) -->
 <!-- ========================================================= -->
-<footer class="relative z-20 px-4 sm:px-8 py-3.5 bg-maroon-deep/95 border-t-2 border-gold-bright/70 flex items-center justify-between gap-2" style="pointer-events: auto;">
-<!-- Previous Button -->
+<footer class="relative z-20 px-4 sm:px-8 py-4 bg-maroon-deep/95 border-t-2 border-gold-bright/70 flex flex-wrap items-center justify-between gap-2.5 text-center" style="pointer-events: auto;">
 <button
 type="button"
-id="prev-btn"
-disabled
-class="flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-gold-bright/55 text-gold-light text-xs sm:text-sm font-medium disabled:opacity-35 disabled:pointer-events-none hover:bg-maroon-crimson transition-all cursor-pointer"
+id="back-to-cover-btn"
+class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full border border-gold-bright/65 text-gold-light hover:bg-maroon-crimson text-xs sm:text-sm font-medium transition-all cursor-pointer"
 >
-<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<svg class="w-4 h-4 text-gold-bright" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
 </svg>
-<span data-i18n="prevBtn" class="t-body">Previous</span>
+<span data-i18n="backToCoverBtn" class="t-body">Cover Page</span>
 </button>
 
-<!-- 4 Clickable Page Indicator Dots -->
-<div class="flex items-center gap-2.5" role="tablist" aria-label="Invitation Pages">
-<button type="button" data-page="1" aria-label="Go to Page 1" class="nav-dot w-3 h-3 rounded-full bg-gold-bright scale-125 transition-all cursor-pointer"></button>
-<button type="button" data-page="2" aria-label="Go to Page 2" class="nav-dot w-3 h-3 rounded-full bg-gold-light/35 hover:bg-gold-light/75 transition-all cursor-pointer"></button>
-<button type="button" data-page="3" aria-label="Go to Page 3" class="nav-dot w-3 h-3 rounded-full bg-gold-light/35 hover:bg-gold-light/75 transition-all cursor-pointer"></button>
-<button type="button" data-page="4" aria-label="Go to Page 4" class="nav-dot w-3 h-3 rounded-full bg-gold-light/35 hover:bg-gold-light/75 transition-all cursor-pointer"></button>
-</div>
+<p data-i18n="footerTagline" class="t-heading font-cinzel text-xs sm:text-sm tracking-widest uppercase text-gold-light/90 order-first sm:order-none w-full sm:w-auto">
+#KrupaWedsVivek • 15 – 16 Feb 2027
+</p>
 
-<!-- Next Button -->
 <button
 type="button"
-id="next-btn"
-class="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-gold-bright text-maroon-deep text-xs sm:text-sm font-bold disabled:opacity-35 disabled:pointer-events-none hover:bg-gold-light transition-all cursor-pointer shadow"
+id="back-to-top-btn"
+class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-gold-bright text-maroon-deep hover:bg-gold-light text-xs sm:text-sm font-bold transition-all cursor-pointer shadow"
 >
-<span data-i18n="nextBtn" class="t-body">Next</span>
 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
 </svg>
+<span data-i18n="backToTopBtn" class="t-body">Back to Top</span>
 </button>
 </footer>
+</div><!-- /#details-view -->
 </main>
 
 <!-- Toast Notification Banner -->
@@ -944,6 +961,7 @@ ev1Title: 'Mameru',
 ev1Time: '🗓️ Monday, 15th Feb 2027 — 2:31 PM',
 ev1Venue: '📍 Maheshwari Bhavan, Nizamabad',
 ev1MosalTitle: '<span>🪷</span> Maternal Family (Mosal Paksh)',
+ev1MosalFamily: 'Vasani Parivaar — Chatrapati Sambhaji Nagar',
 ev1Mosal1: '<strong class="font-semibold text-maroon-crimson">Nana – Nani:</strong> Manjulaben & Dhanji Vasani',
 ev1Mosal2: '<strong class="font-semibold text-maroon-crimson">Mama – Mami:</strong> Hemalathaben & Mahendar Vasani',
 ev1Mosal3: '<strong class="font-semibold text-maroon-crimson">Mama – Mami:</strong> Alpaben & Haresh Vasani',
@@ -979,13 +997,16 @@ p4VenueAddr: 'Maheshwari Bhavan, Nizamabad, Telangana',
 p4DatesSummary: '15th Feb: Mameru & Sangeet<br />16th Feb: Mandap Mahurat & Hasta Melap',
 p4FamilyTitle: 'With Love — Sankhla Parivaar',
 p4FamilyNames:
-'Smt. Parvathiben & Shri Jayanthilal Sankhla, Smt. Meenakshiben & Shri Bharat Sankhla, and entire Sankhla Family',
+'Smt. Parvathiben & Shri Jayanthilal Sankhla, Smt. Meenakshiben & Shri Bharat Sankhla, Smt. Rakshaben & Shri Kamlesh Sankhla, and entire Sankhla Family',
 p4ClosingMsg:
 '“Your presence and blessings are the greatest gifts we could ask for as Krupa & Vivek begin their forever journey together.”',
 blessBtn: 'Shower Blessings',
 whatsappBtn: 'Send Wishes on WhatsApp',
 whatsappMsg:
 'Heartiest congratulations to Krupa & Vivek on their upcoming wedding on 15–16 Feb 2027! Warmest wishes and blessings to Sankhla Parivaar. 💐✨',
+footerTagline: '#KrupaWedsVivek • 15 – 16 Feb 2027',
+backToCoverBtn: 'Cover Page',
+backToTopBtn: 'Back to Top',
 toastBlessing: '🌸 Heartfelt blessings showered upon Krupa & Vivek! ✨',
 },
 
@@ -1032,6 +1053,7 @@ ev1Title: 'મામેરું',
 ev1Time: '🗓️ સોમવાર, ૧૫ ફેબ્રુઆરી ૨૦૨૭ — બપોરે ૨:૩૧ કલાકે',
 ev1Venue: '📍 મહેશ્વરી ભવન, નિઝામાબાદ',
 ev1MosalTitle: '<span>🪷</span> મોસાળ પક્ષ',
+ev1MosalFamily: 'વાસાણી પરિવાર — છત્રપતિ સંભાજી નગર',
 ev1Mosal1: '<strong class="font-semibold text-maroon-crimson">નાના – નાની:</strong> શ્રીમતી મંજુલાબેન તથા શ્રી ધનજી વાસાણી',
 ev1Mosal2: '<strong class="font-semibold text-maroon-crimson">મામા – મામી:</strong> શ્રીમતી હેમલતાબેન તથા શ્રી મહેન્દર વાસાણી',
 ev1Mosal3: '<strong class="font-semibold text-maroon-crimson">મામા – મામી:</strong> શ્રીમતી અલ્પાબેન તથા શ્રી હરેશ વાસાણી',
@@ -1067,21 +1089,21 @@ p4VenueAddr: 'મહેશ્વરી ભવન, નિઝામાબાદ, �
 p4DatesSummary: '૧૫ ફેબ્રુઆરી: મામેરું અને સંગીત<br />૧૬ ફેબ્રુઆરી: મંડપ મુહૂર્ત અને હસ્ત મેળાપ',
 p4FamilyTitle: 'સ્નેહાધીન — સાંખલા પરિવાર',
 p4FamilyNames:
-'શ્રીમતી પાર્વતીબેન તથા શ્રી જયંતિલાલ સાંખલા, શ્રીમતી મીનાક્ષીબેન તથા શ્રી ભરત સાંખલા અને સમસ્ત સાંખલા પરિવાર',
+'શ્રીમતી પાર્વતીબેન તથા શ્રી જયંતિલાલ સાંખલા, શ્રીમતી મીનાક્ષીબેન તથા શ્રી ભરત સાંખલા, શ્રીમતી રક્ષાબેન તથા શ્રી કમલેશ સાંખલા અને સમસ્ત સાંખલા પરિવાર',
 p4ClosingMsg:
 '“કૃપા અને વિવેકના નવજીવનની શરૂઆતમાં આપની ઉપસ્થિતિ અને આશીર્વાદ જ અમારા માટે સૌથી મોટી ભેટ છે.”',
 blessBtn: 'આશીર્વાદ અને પુષ્પવર્ષા',
 whatsappBtn: 'WhatsApp પર શુભેચ્છા મોકલો',
 whatsappMsg:
 'ચિ. કૃપા અને ચિ. વિવેકના ૧૫–૧૬ ફેબ્રુઆરી ૨૦૨૭ ના શુભ વિવાહ પ્રસંગે હાર્દિક અભિનંદન! સાંખલા પરિવારને ખૂબ ખૂબ શુભેચ્છાઓ અને અનંત આશીર્વાદ. 💐✨',
+footerTagline: 'કૃપા અને વિવેક • ૧૫ – ૧૬ ફેબ્રુઆરી ૨૦૨૭',
+backToCoverBtn: 'મુખપૃષ્ઠ',
+backToTopBtn: 'ઉપર જાઓ',
 toastBlessing: '🌸 કૃપા અને વિવેક પર અનંત શુભ આશીર્વાદની વર્ષા! ✨',
 },
 };
 
 let currentLang = 'en';
-let currentPage = 1;
-const totalPages = 4;
-let pageTransitionTimer = null;
 
 /* -----------------------------------------------------------------------
 2. LANGUAGE SWITCHER (ENGLISH | ગુજરાતી)
@@ -1098,21 +1120,21 @@ if (lang === 'gu') {
 document.body.classList.add('lang-gu');
 if (btnGu) {
 btnGu.className =
-'px-3 py-1 rounded-full text-xs sm:text-sm font-gujSans font-semibold transition-all cursor-pointer bg-gold-bright text-maroon-deep shadow';
+'px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-gujSans font-semibold transition-all cursor-pointer bg-gold-bright text-maroon-deep shadow';
 }
 if (btnEn) {
 btnEn.className =
-'px-3 py-1 rounded-full text-xs sm:text-sm font-semibold transition-all cursor-pointer text-gold-light hover:text-white';
+'px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all cursor-pointer text-gold-light hover:text-white';
 }
 } else {
 document.body.classList.remove('lang-gu');
 if (btnEn) {
 btnEn.className =
-'px-3 py-1 rounded-full text-xs sm:text-sm font-semibold transition-all cursor-pointer bg-gold-bright text-maroon-deep shadow';
+'px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all cursor-pointer bg-gold-bright text-maroon-deep shadow';
 }
 if (btnGu) {
 btnGu.className =
-'px-3 py-1 rounded-full text-xs sm:text-sm font-gujSans font-semibold transition-all cursor-pointer text-gold-light hover:text-white';
+'px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-gujSans font-semibold transition-all cursor-pointer text-gold-light hover:text-white';
 }
 }
 
@@ -1125,6 +1147,7 @@ el.innerHTML = dict[key];
 
 updateWhatsAppLink();
 updateMusicLabel();
+
 }
 
 function updateWhatsAppLink() {
@@ -1136,73 +1159,42 @@ waBtn.href = 'https://wa.me/?text=' + encodeURIComponent(dict.whatsappMsg);
 }
 
 /* -----------------------------------------------------------------------
-3. MULTI-PAGE NAVIGATION (1 -> 2 -> 3 -> 4)
+3. TWO-PAGE VIEW SWITCHER (PAGE 1 COVER <-> PAGE 2 VERTICAL SCROLL)
 ----------------------------------------------------------------------- */
-function goToPage(targetPage) {
-targetPage = Number(targetPage);
-if (isNaN(targetPage) || targetPage < 1 || targetPage > totalPages || targetPage === currentPage) {
-return;
+let viewTransitionTimer = null;
+
+function switchView(showDetails) {
+const coverView = document.getElementById('cover-view');
+const detailsView = document.getElementById('details-view');
+if (!coverView || !detailsView) return;
+
+if (viewTransitionTimer) {
+clearTimeout(viewTransitionTimer);
+viewTransitionTimer = null;
 }
 
-if (pageTransitionTimer) {
-clearTimeout(pageTransitionTimer);
-pageTransitionTimer = null;
-}
+const fromView = showDetails ? coverView : detailsView;
+const toView = showDetails ? detailsView : coverView;
 
-const oldSection = document.getElementById('page-' + currentPage);
-const newSection = document.getElementById('page-' + targetPage);
-if (!oldSection || !newSection) return;
-
-// Immediately clean up any other sections in case of rapid clicks
-for (let i = 1; i <= totalPages; i++) {
-if (i !== currentPage && i !== targetPage) {
-const sec = document.getElementById('page-' + i);
-if (sec) sec.classList.remove('active', 'visible');
-}
-}
-
-oldSection.classList.remove('visible');
-pageTransitionTimer = setTimeout(function () {
-oldSection.classList.remove('active');
-newSection.classList.add('active');
-void newSection.offsetWidth;
-newSection.classList.add('visible');
-pageTransitionTimer = null;
+fromView.classList.remove('visible');
+viewTransitionTimer = setTimeout(function () {
+fromView.classList.remove('active');
+toView.classList.add('active');
+window.scrollTo({ top: 0, behavior: 'instant' in window ? 'instant' : 'auto' });
+void toView.offsetWidth;
+toView.classList.add('visible');
+viewTransitionTimer = null;
 }, 180);
-
-currentPage = targetPage;
-updateNavigationUI();
-}
-
-function changePage(delta) {
-goToPage(currentPage + delta);
-}
-
-function updateNavigationUI() {
-const headerNum = document.getElementById('header-page-num');
-const prevBtn = document.getElementById('prev-btn');
-const nextBtn = document.getElementById('next-btn');
-
-if (headerNum) headerNum.textContent = String(currentPage);
-if (prevBtn) prevBtn.disabled = currentPage <= 1;
-if (nextBtn) nextBtn.disabled = currentPage >= totalPages;
-
-document.querySelectorAll('.nav-dot').forEach(function (dot) {
-const dotPage = Number(dot.getAttribute('data-page'));
-if (dotPage === currentPage) {
-dot.classList.add('bg-gold-bright', 'scale-125');
-dot.classList.remove('bg-gold-light/35');
-} else {
-dot.classList.remove('bg-gold-bright', 'scale-125');
-dot.classList.add('bg-gold-light/35');
-}
-});
 }
 
 function openInvitation() {
 startMusic();
-goToPage(2);
+switchView(true);
 showerBlessings(false);
+}
+
+function showCoverPage() {
+switchView(false);
 }
 
 /* -----------------------------------------------------------------------
@@ -1765,60 +1757,20 @@ if (btnGu) btnGu.addEventListener('click', function () { setLanguage('gu'); });
 const openBtn = document.getElementById('open-invitation-btn');
 if (openBtn) openBtn.addEventListener('click', openInvitation);
 
-const prevBtn = document.getElementById('prev-btn');
-if (prevBtn) prevBtn.addEventListener('click', function () { changePage(-1); });
+const backToCoverBtn = document.getElementById('back-to-cover-btn');
+if (backToCoverBtn) {
+backToCoverBtn.addEventListener('click', showCoverPage);
+}
 
-const nextBtn = document.getElementById('next-btn');
-if (nextBtn) nextBtn.addEventListener('click', function () { changePage(1); });
+const backToTopBtn = document.getElementById('back-to-top-btn');
+if (backToTopBtn) {
+backToTopBtn.addEventListener('click', function () {
+window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+}
 
 const blessBtn = document.getElementById('shower-blessings-btn');
 if (blessBtn) blessBtn.addEventListener('click', function () { showerBlessings(true); });
-
-document.querySelectorAll('.nav-dot').forEach(function (dot) {
-dot.addEventListener('click', function () {
-const target = Number(dot.getAttribute('data-page'));
-goToPage(target);
-});
-});
-
-// Keyboard Left/Right arrow navigation
-document.addEventListener('keydown', function (e) {
-if (e.key === 'ArrowRight') changePage(1);
-if (e.key === 'ArrowLeft') changePage(-1);
-});
-
-// Horizontal swipe navigation on card (does not interfere with vertical scrolling on Page 3)
-let touchStartX = 0;
-let touchStartY = 0;
-const card = document.getElementById('invitation-card');
-if (card) {
-card.addEventListener(
-'touchstart',
-function (e) {
-if (e.target.closest('button, a')) return;
-touchStartX = e.changedTouches[0].screenX;
-touchStartY = e.changedTouches[0].screenY;
-},
-{ passive: true }
-);
-card.addEventListener(
-'touchend',
-function (e) {
-if (!touchStartX || e.target.closest('button, a')) {
-touchStartX = 0;
-return;
-}
-const diffX = touchStartX - e.changedTouches[0].screenX;
-const diffY = touchStartY - e.changedTouches[0].screenY;
-touchStartX = 0;
-if (Math.abs(diffX) > 60 && Math.abs(diffX) > Math.abs(diffY) * 1.4) {
-if (diffX > 0) changePage(1);
-else changePage(-1);
-}
-},
-{ passive: true }
-);
-}
 
 // Initialize canvases, countdown & initial UI state
 resizeCanvases();
@@ -1828,9 +1780,9 @@ window.addEventListener('resize', resizeCanvases);
 initAmbientGoldParticles();
 updateCountdown();
 setInterval(updateCountdown, 1000);
-updateNavigationUI();
 updateWhatsAppLink();
 updateMusicLabel();
+
 }
 
 if (document.readyState === 'loading') {
